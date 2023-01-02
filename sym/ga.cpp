@@ -1,7 +1,12 @@
 #include "ga.hpp"
 
 #include <cassert>
+
+#if defined(KLEIN_ARCHITECTURE_ARM)
+#include <sse2neon.h>
+#else
 #include <immintrin.h>
+#endif
 
 uint32_t popcnt(uint32_t i)
 {

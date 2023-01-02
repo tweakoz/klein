@@ -3,20 +3,23 @@
 // intrinsics
 #pragma once
 
-#ifdef KLEIN_SSE_4_1
+# if defined(KLEIN_ARCHITECTURE_ARM)
+# include <sse2neon.h>
+# else
+#  ifdef KLEIN_SSE_4_1
 #    ifdef KLEIN_USE_SIMDE
 #        include <x86/sse4.1.h>
 #    else
 #        include <smmintrin.h>
 #    endif
-#else
+#  else
 #    ifdef KLEIN_USE_SIMDE
 #        include <x86/sse3.h>
 #    else
 #        include <pmmintrin.h>
 #    endif
-#endif
-
+#  endif
+# endif
 // Little-endian XMM register swizzle
 //
 // KLN_SWIZZLE(reg, 3, 2, 1, 0) is the identity.

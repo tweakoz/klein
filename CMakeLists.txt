@@ -25,8 +25,9 @@ else()
     option(KLEIN_VALIDATE "Enable runtime validations" OFF)
     option(KLEIN_INSTALL "Create CMake config-file package during install step" ON)
 endif()
-option(KLEIN_ENABLE_SIMDE "Enable simde shim to support non-x86 platforms" OFF)
 
+option(KLEIN_ARCHITECTURE_ARM "use arm sse emulation" OFF)
+option(KLEIN_ENABLE_SIMDE "Enable simde shim to support non-x86 platforms" OFF)
 option(KLEIN_BUILD_SYM "Enable compilation of symbolic Klein utility" ON)
 option(KLEIN_BUILD_C_BINDINGS "Enable compilation of the Klein C bindings" ON)
 
@@ -42,59 +43,69 @@ if(NOT simde_POPULATED)
     FetchContent_Populate(simde)
 endif()
 
+#####################################################################
 # The default platform and instruction set is x86 SSE3
+
 add_library(klein INTERFACE)
 add_library(klein::klein ALIAS klein)
-target_include_directories(klein INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/public>
-    $<BUILD_INTERFACE:${simde_SOURCE_DIR}/simde>
-    $<INSTALL_INTERFACE:include>
-)
-if(NOT MSVC)
-    target_compile_options(klein INTERFACE -msse3)
-endif()
-if(KLEIN_ENABLE_SIMDE)
-    target_compile_definitions(klein INTERFACE KLEIN_USE_SIMDE)
-endif()
-
 add_library(klein_cxx11 INTERFACE)
 add_library(klein::klein_cxx11 ALIAS klein_cxx11)
-target_include_directories(klein_cxx11 INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/public>
-    $<BUILD_INTERFACE:${simde_SOURCE_DIR}/simde>
-    $<INSTALL_INTERFACE:include>
-)
-target_compile_features(klein_cxx11 INTERFACE cxx_std_11)
-if(NOT MSVC)
-    target_compile_options(klein_cxx11 INTERFACE -msse3)
-endif()
-if(KLEIN_ENABLE_SIMDE)
-    target_compile_definitions(klein_cxx11 INTERFACE KLEIN_USE_SIMDE)
-endif()
-
 add_library(klein_sse42 INTERFACE)
 add_library(klein::klein_sse42 ALIAS klein_sse42)
-target_include_directories(klein_sse42 INTERFACE
+
+function(defincdirs target)
+  target_include_directories( ${target} INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/public>
     $<BUILD_INTERFACE:${simde_SOURCE_DIR}/simde>
     $<INSTALL_INTERFACE:include>
-)
+    )
+endfunction()
+
+defincdirs(klein)
+defincdirs(klein_cxx11)
+defincdirs(klein_sse42)
+
+#####################################################################
+
+target_compile_features(klein_cxx11 INTERFACE cxx_std_11)
 target_compile_features(klein_sse42 INTERFACE cxx_std_17)
-# SSE4.1 has > 97% market penetration according to the Steam hardware survey
-# queried as of December 2019 while AVX2 is around 70%. Thus, we can assume
-# FMA support is at least 70%, but perhaps not much more beyond that.
-# TODO: Optionally support FMA
-if(MSVC)
-    # On MSVC, SSE2 enables code generation of SSE2 and later (does not include
-    # AVX extensions). This is on by default.
-else()
-    # Unlike MSVC, FMA instructions are enabled with a separate feature flag
-    target_compile_options(klein_sse42 INTERFACE -msse4.1)
-    target_compile_definitions(klein_sse42 INTERFACE KLEIN_SSE_4_1)
+
+#####################################################################
+if(KLEIN_ARCHITECTURE_ARM) ## ARM (sse emulation via sse2neon)
+  target_compile_definitions(klein INTERFACE KLEIN_ARCHITECTURE_ARM)
+  target_compile_definitions(klein_cxx11 INTERFACE KLEIN_ARCHITECTURE_ARM)
+  target_compile_definitions(klein_sse42 INTERFACE KLEIN_ARCHITECTURE_ARM)
+  target_include_directories( klein AFTER PUBLIC $ENV{KLEIN_SSE2NEON_DIR} )
+  target_include_directories( klein_cxx11 AFTER PUBLIC $ENV{KLEIN_SSE2NEON_DIR} )
+  target_include_directories( klein_sse42 AFTER PUBLIC $ENV{KLEIN_SSE2NEON_DIR} )
+#####################################################################
+else() ## X86
+  # SSE4.1 has > 97% market penetration according to the Steam hardware survey
+  # queried as of December 2019 while AVX2 is around 70%. Thus, we can assume
+  # FMA support is at least 70%, but perhaps not much more beyond that.
+  # TODO: Optionally support FMA
+  if(MSVC)
+      # On MSVC, SSE2 enables code generation of SSE2 and later (does not include
+      # AVX extensions). This is on by default.
+  else()
+      # Unlike MSVC, FMA instructions are enabled with a separate feature flag
+      target_compile_options(klein_sse42 INTERFACE -msse4.1)
+      target_compile_definitions(klein_sse42 INTERFACE KLEIN_SSE_4_1)
+      target_compile_options(klein INTERFACE -msse3)
+      target_compile_options(klein_cxx11 INTERFACE -msse3)
+  endif()
+
 endif()
+
+#####################################################################
+
 if(KLEIN_ENABLE_SIMDE)
-    target_compile_definitions(klein_sse42 INTERFACE KLEIN_USE_SIMDE)
+  target_compile_definitions(klein INTERFACE KLEIN_USE_SIMDE)
+  target_compile_definitions(klein_cxx11 INTERFACE KLEIN_USE_SIMDE)
+  target_compile_definitions(klein_sse42 INTERFACE KLEIN_USE_SIMDE)
 endif()
+
+#####################################################################
 
 if(KLEIN_ENABLE_PERF)
     add_subdirectory(perf)

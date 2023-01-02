@@ -29,6 +29,7 @@ target_compile_definitions(klein_test PRIVATE
     DOCTEST_CONFIG_NO_POSIX_SIGNALS
     DOCTEST_CONFIG_NO_EXCEPTIONS
 )
+
 if (NOT MSVC)
     target_compile_options(klein_test
         PRIVATE
@@ -130,3 +131,16 @@ set_target_properties(klein_test_glsl
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}
 )
+
+#####################################################################
+if(KLEIN_ARCHITECTURE_ARM) # ARM (sse emulation via sse2neon)
+  target_compile_definitions( klein_test PRIVATE KLEIN_ARCHITECTURE_ARM )
+  target_compile_definitions( klein_test_sse42 PRIVATE KLEIN_ARCHITECTURE_ARM )
+  target_compile_definitions( klein_test_cxx11 PRIVATE KLEIN_ARCHITECTURE_ARM )
+  target_compile_definitions( klein_test_glsl PRIVATE KLEIN_ARCHITECTURE_ARM )
+  target_include_directories( klein_test AFTER PRIVATE $ENV{KLEIN_SSE2NEON_DIR} )
+  target_include_directories( klein_test_sse42 AFTER PRIVATE $ENV{KLEIN_SSE2NEON_DIR} )
+  target_include_directories( klein_test_cxx11 AFTER PRIVATE $ENV{KLEIN_SSE2NEON_DIR} )
+  target_include_directories( klein_test_glsl AFTER PRIVATE $ENV{KLEIN_SSE2NEON_DIR} )
+endif()
+#####################################################################

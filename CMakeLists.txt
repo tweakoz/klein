@@ -75,9 +75,9 @@ if(KLEIN_ARCHITECTURE_ARM) ## ARM (sse emulation via sse2neon)
   target_compile_definitions(klein INTERFACE KLEIN_ARCHITECTURE_ARM)
   target_compile_definitions(klein_cxx11 INTERFACE KLEIN_ARCHITECTURE_ARM)
   target_compile_definitions(klein_sse42 INTERFACE KLEIN_ARCHITECTURE_ARM)
-  target_include_directories( klein AFTER PUBLIC $ENV{KLEIN_SSE2NEON_DIR} )
-  target_include_directories( klein_cxx11 AFTER PUBLIC $ENV{KLEIN_SSE2NEON_DIR} )
-  target_include_directories( klein_sse42 AFTER PUBLIC $ENV{KLEIN_SSE2NEON_DIR} )
+  target_include_directories( klein INTERFACE ${KLEIN_SSE2NEON_DIR} )
+  target_include_directories( klein_cxx11 INTERFACE ${KLEIN_SSE2NEON_DIR} )
+  target_include_directories( klein_sse42 INTERFACE ${KLEIN_SSE2NEON_DIR} )
 #####################################################################
 else() ## X86
   # SSE4.1 has > 97% market penetration according to the Steam hardware survey
